@@ -1,0 +1,18 @@
+{
+  "name": "steuerchat-integration-tests",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:reconnect": "tsx test-reconnect.ts"
+  },
+  "dependencies": {
+    "socket.io-client": "4.7.5",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.12",
+    "@types/uuid": "^9.0.7",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.3"
+  }
+}
