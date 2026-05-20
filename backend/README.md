@@ -1,13 +1,13 @@
 # SteuerChat Backend
 
-Streaming chat backend built with NestJS and socket.io.
+Бэкенд потокового чата, построенный на NestJS и socket.io.
 
-## Requirements
+## Требования
 
 - Node.js 20.x
 - npm 10.x
 
-## Setup
+## Установка и запуск
 
 ```bash
 cd backend
@@ -15,22 +15,22 @@ npm install
 npm run start:dev
 ```
 
-The server starts on port 3000 by default. Set the `PORT` environment variable to override.
+Сервер запускается на порту 3000 по умолчанию. Для переопределения порта задайте переменную окружения `PORT`.
 
-## Scripts
+## Скрипты
 
-| Script | Description |
-|--------|-------------|
-| `npm run start` | Start in production mode |
-| `npm run start:dev` | Start with file watching |
-| `npm run build` | Compile TypeScript |
-| `npm test` | Run unit tests |
+| Скрипт | Описание |
+|--------|----------|
+| `npm run start` | Запуск в продакшн-режиме |
+| `npm run start:dev` | Запуск с отслеживанием изменений файлов |
+| `npm run build` | Компиляция TypeScript |
+| `npm test` | Запуск юнит-тестов |
 
-## Protocol
+## Протокол
 
-The server communicates over socket.io with the following events:
+Сервер взаимодействует через socket.io с помощью следующих событий:
 
-- **Client to Server:** `send-message`, `cancel`, `resume`
-- **Server to Client:** `stream-chunk`, `stream-end`, `stream-cancelled`, `catch-up`, `error`
+- **Клиент → Сервер:** `send-message`, `cancel`, `resume`
+- **Сервер → Клиент:** `stream-chunk`, `stream-end`, `stream-cancelled`, `catch-up`, `error`
 
-See the project `PLAN.md` for the full protocol specification and state machine.
+Полная спецификация протокола и описание конечного автомата находятся в файле `PLAN.md` проекта.

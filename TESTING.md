@@ -1,174 +1,174 @@
-# Manual Test Plan -- Streaming Chat Prototype
+# Ручной тест-план -- Прототип стримингового чата
 
-Use this checklist when testing the streaming chat prototype. Each section describes a scenario, the steps to reproduce, and the expected results.
-
----
-
-## 1. Basic Streaming
-
-**Goal:** Verify that sending a message produces a word-by-word streamed response at approximately 5 words per second, completing with the full corpus text.
-
-- [ ] Open the app and confirm connection state shows "connected"
-- [ ] Type "Hello" and tap send
-- [ ] Observe words appearing one at a time in the response bubble
-- [ ] Confirm the rate is approximately 5 words per second (each word ~200ms apart)
-- [ ] Wait for the stream to finish (roughly 100 seconds for ~500 words)
-- [ ] Confirm no error banners appeared during streaming
-- [ ] Confirm the final text is the complete Poe excerpt ("True! nervous very very dreadfully nervous...")
+Используйте этот чеклист при тестировании прототипа стримингового чата. Каждая секция описывает сценарий, шаги воспроизведения и ожидаемые результаты.
 
 ---
 
-## 2. Cancel Mid-Stream
+## 1. Базовый стриминг
 
-**Goal:** Verify that cancelling a stream stops the response immediately, shows what was received so far, and allows sending a new message.
+**Цель:** убедиться, что отправка сообщения порождает пословный стриминговый ответ со скоростью примерно 5 слов в секунду, завершающийся полным текстом корпуса.
 
-- [ ] Send a message and wait for approximately 20-30 words to appear
-- [ ] Tap the cancel/stop button
-- [ ] Confirm the response stops immediately (no new words appear)
-- [ ] Confirm the partial text remains visible (not cleared)
-- [ ] Confirm the input field is re-enabled for a new message
-- [ ] Send a new message
-- [ ] Confirm the new stream starts and words appear normally
-
----
-
-## 3. Airplane Mode Reconnect (Key Scenario)
-
-**Goal:** Verify that toggling airplane mode mid-stream causes the app to reconnect and resume without losing any words.
-
-### Steps
-
-- [ ] Send a message and wait for approximately 10-15 words to appear
-- [ ] Toggle airplane mode ON (or disable Wi-Fi)
-- [ ] Observe the connection banner changes to "reconnecting" or "offline"
-- [ ] Wait 5 seconds
-- [ ] Toggle airplane mode OFF (or re-enable Wi-Fi)
-- [ ] Observe the connection banner returns to "connected"
-
-### Expected Results
-
-- [ ] After reconnection, missed words appear quickly (catch-up batch)
-- [ ] Stream continues at normal pace (~5 wps) after catch-up
-- [ ] The final complete text matches the full corpus with no gaps
-- [ ] No duplicate words in the response
-- [ ] Word order is correct throughout
+- [ ] Откройте приложение и убедитесь, что состояние соединения показывает "connected"
+- [ ] Введите "Hello" и нажмите кнопку отправки
+- [ ] Наблюдайте, как слова появляются по одному в пузыре ответа
+- [ ] Убедитесь, что скорость примерно 5 слов в секунду (каждое слово ~200мс)
+- [ ] Дождитесь завершения стрима (примерно 100 секунд на ~500 слов)
+- [ ] Убедитесь, что во время стриминга не было ошибок/баннеров
+- [ ] Убедитесь, что финальный текст -- полный отрывок По ("True! nervous very very dreadfully nervous...")
 
 ---
 
-## 4. Multiple Sequential Messages
+## 2. Отмена посреди стрима
 
-**Goal:** Verify that after one stream completes, another can be started successfully.
+**Цель:** убедиться, что отмена стрима немедленно останавливает ответ, показывает полученный текст и позволяет отправить новое сообщение.
 
-- [ ] Send a message and wait for the stream to complete fully
-- [ ] Confirm "stream completed" state (no more words arriving)
-- [ ] Send a second message
-- [ ] Confirm the second stream starts and produces words normally
-- [ ] Wait for the second stream to complete
-- [ ] Both responses should show the complete corpus text
-
----
-
-## 5. Cancel Then New Message
-
-**Goal:** Verify the cancel-then-send flow works cleanly.
-
-- [ ] Send a message, wait for ~10 words
-- [ ] Cancel the stream
-- [ ] Immediately send a new message
-- [ ] Confirm the new stream starts without errors
-- [ ] Confirm no leftover words from the cancelled stream appear
-- [ ] Wait for the new stream to complete normally
+- [ ] Отправьте сообщение и дождитесь появления примерно 20-30 слов
+- [ ] Нажмите кнопку отмены/стоп
+- [ ] Убедитесь, что ответ остановился мгновенно (новые слова не появляются)
+- [ ] Убедитесь, что частичный текст остаётся видимым (не очищается)
+- [ ] Убедитесь, что поле ввода снова доступно для нового сообщения
+- [ ] Отправьте новое сообщение
+- [ ] Убедитесь, что новый стрим начинается и слова появляются нормально
 
 ---
 
-## 6. Connection State Indicators
+## 3. Реконнект в режиме полёта (ключевой сценарий)
 
-**Goal:** Verify the connection banner/indicator shows the correct state at each point.
+**Цель:** убедиться, что включение режима полёта посреди стрима приводит к переподключению приложения и возобновлению без потери слов.
 
-| Scenario | Expected State |
-|----------|---------------|
-| App opens, server is running | "Connected" (green) |
-| Server is stopped before app opens | "Failed" or "Offline" (red) |
-| Airplane mode toggled ON mid-stream | "Reconnecting" then "Offline" |
-| Airplane mode toggled OFF | "Reconnecting" then "Connected" |
-| Server killed while app is connected | "Reconnecting" then "Offline" |
-| Server restarted after kill | "Connected" (after auto-reconnect) |
+### Шаги
 
-- [ ] Verify each state transition above
-- [ ] Confirm the banner is visible only when NOT connected (or always visible with correct color)
+- [ ] Отправьте сообщение и дождитесь появления примерно 10-15 слов
+- [ ] Включите режим полёта (или отключите Wi-Fi)
+- [ ] Наблюдайте, как баннер соединения меняется на "reconnecting" или "offline"
+- [ ] Подождите 5 секунд
+- [ ] Выключите режим полёта (или включите Wi-Fi обратно)
+- [ ] Наблюдайте, как баннер соединения возвращается к "connected"
 
----
+### Ожидаемые результаты
 
-## 7. Edge Cases
-
-### 7a. Empty Message
-
-- [ ] Send an empty message (no text)
-- [ ] Confirm the server still starts a stream (the corpus is fixed, not dependent on input text)
-- [ ] OR confirm the client prevents sending empty messages (depending on UI validation)
-
-### 7b. Rapid Send Attempts
-
-- [ ] Tap send multiple times quickly with different text
-- [ ] Confirm only one stream is active at a time
-- [ ] Confirm no error crashes or duplicate streams
-
-### 7c. Disconnect at Stream Start
-
-- [ ] Send a message
-- [ ] Toggle airplane mode ON within 1 second (before many words arrive)
-- [ ] Wait 5 seconds, toggle airplane mode OFF
-- [ ] Confirm catch-up delivers all missed words
-- [ ] Confirm stream continues and completes normally
-
-### 7d. Disconnect Near Stream End
-
-- [ ] Send a message and wait until approximately 90% of words have arrived (~450 out of 500)
-- [ ] Toggle airplane mode ON
-- [ ] Wait 5 seconds, toggle airplane mode OFF
-- [ ] Confirm the remaining words arrive via catch-up
-- [ ] Confirm stream-end is received
-- [ ] Confirm the complete text matches the corpus
-
-### 7e. Disconnect After Stream Completed
-
-- [ ] Send a message and wait for the stream to complete
-- [ ] Toggle airplane mode ON, then OFF
-- [ ] Confirm the completed message is still displayed
-- [ ] Confirm a new message can be sent
-
-### 7f. Server Restart During Stream
-
-- [ ] Send a message and wait for ~20 words
-- [ ] Kill and restart the backend server
-- [ ] Confirm the app shows "reconnecting" then "connected"
-- [ ] Confirm the in-progress message is lost (expected: server state is in-memory only)
-- [ ] Confirm a new message can be sent after reconnection
+- [ ] После переподключения пропущенные слова приходят быстро (catch-up пакет)
+- [ ] Стрим продолжается в нормальном темпе (~5 слов/сек) после catch-up
+- [ ] Итоговый полный текст совпадает с корпусом без пропусков
+- [ ] Нет дублирующихся слов в ответе
+- [ ] Порядок слов корректен на протяжении всего стрима
 
 ---
 
-## Test Environment Setup
+## 4. Несколько сообщений подряд
 
-1. Start the backend:
+**Цель:** убедиться, что после завершения одного стрима можно успешно начать другой.
+
+- [ ] Отправьте сообщение и дождитесь полного завершения стрима
+- [ ] Убедитесь в состоянии "стрим завершён" (новые слова не поступают)
+- [ ] Отправьте второе сообщение
+- [ ] Убедитесь, что второй стрим начинается и слова появляются нормально
+- [ ] Дождитесь завершения второго стрима
+- [ ] Оба ответа должны содержать полный текст корпуса
+
+---
+
+## 5. Отмена, затем новое сообщение
+
+**Цель:** убедиться, что цепочка "отмена - новое сообщение" работает корректно.
+
+- [ ] Отправьте сообщение, дождитесь ~10 слов
+- [ ] Отмените стрим
+- [ ] Немедленно отправьте новое сообщение
+- [ ] Убедитесь, что новый стрим начинается без ошибок
+- [ ] Убедитесь, что остаточные слова от отменённого стрима не появляются
+- [ ] Дождитесь нормального завершения нового стрима
+
+---
+
+## 6. Индикаторы состояния соединения
+
+**Цель:** убедиться, что баннер/индикатор соединения показывает корректное состояние в каждый момент.
+
+| Сценарий | Ожидаемое состояние |
+|----------|---------------------|
+| Приложение открыто, сервер работает | "Connected" (зелёный) |
+| Сервер остановлен до открытия приложения | "Failed" или "Offline" (красный) |
+| Режим полёта включён посреди стрима | "Reconnecting", затем "Offline" |
+| Режим полёта выключен | "Reconnecting", затем "Connected" |
+| Сервер убит при подключённом приложении | "Reconnecting", затем "Offline" |
+| Сервер перезапущен после убийства | "Connected" (после автореконнекта) |
+
+- [ ] Проверьте каждый переход состояния из таблицы выше
+- [ ] Убедитесь, что баннер виден только при отсутствии соединения (или всегда виден с корректным цветом)
+
+---
+
+## 7. Граничные случаи
+
+### 7a. Пустое сообщение
+
+- [ ] Попробуйте отправить пустое сообщение (без текста)
+- [ ] Убедитесь, что сервер всё равно начинает стрим (корпус фиксирован, не зависит от текста)
+- [ ] ИЛИ убедитесь, что клиент не позволяет отправить пустое сообщение (в зависимости от валидации на UI)
+
+### 7b. Быстрые повторные отправки
+
+- [ ] Нажмите кнопку отправки несколько раз подряд с разным текстом
+- [ ] Убедитесь, что одновременно активен только один стрим
+- [ ] Убедитесь, что нет крэшей или дублирующихся стримов
+
+### 7c. Отключение в начале стрима
+
+- [ ] Отправьте сообщение
+- [ ] Включите режим полёта в течение 1 секунды (до прихода большого количества слов)
+- [ ] Подождите 5 секунд, выключите режим полёта
+- [ ] Убедитесь, что catch-up доставляет все пропущенные слова
+- [ ] Убедитесь, что стрим продолжается и завершается нормально
+
+### 7d. Отключение ближе к концу стрима
+
+- [ ] Отправьте сообщение и дождитесь прихода примерно 90% слов (~450 из 500)
+- [ ] Включите режим полёта
+- [ ] Подождите 5 секунд, выключите режим полёта
+- [ ] Убедитесь, что оставшиеся слова приходят через catch-up
+- [ ] Убедитесь, что получен stream-end
+- [ ] Убедитесь, что полный текст совпадает с корпусом
+
+### 7e. Отключение после завершения стрима
+
+- [ ] Отправьте сообщение и дождитесь полного завершения стрима
+- [ ] Включите и выключите режим полёта
+- [ ] Убедитесь, что завершённое сообщение по-прежнему отображается
+- [ ] Убедитесь, что можно отправить новое сообщение
+
+### 7f. Перезапуск сервера посреди стрима
+
+- [ ] Отправьте сообщение и дождитесь ~20 слов
+- [ ] Убейте и перезапустите бэкенд-сервер
+- [ ] Убедитесь, что приложение показывает "reconnecting", затем "connected"
+- [ ] Убедитесь, что текущее сообщение потеряно (ожидаемо: состояние сервера хранится только в памяти)
+- [ ] Убедитесь, что новое сообщение можно отправить после переподключения
+
+---
+
+## Настройка тестового окружения
+
+1. Запустите бэкенд:
    ```bash
    cd backend
    npm run build
    node dist/main.js
    ```
-2. Verify the server is running: open `http://localhost:3000` in a browser (should see default NestJS page or 404).
-3. Run integration tests:
+2. Проверьте, что сервер работает: откройте `http://localhost:3000` в браузере (должна быть страница NestJS по умолчанию или 404).
+3. Запустите интеграционные тесты:
    ```bash
    cd scripts
    npm install
    npx tsx test-reconnect.ts
    ```
-4. For iOS testing: build and run the Xcode project on a device (airplane mode requires a real device, not a simulator).
+4. Для iOS-тестирования: соберите и запустите Xcode-проект на реальном устройстве (режим полёта требует физическое устройство, не симулятор).
 
 ---
 
-## Pass Criteria
+## Критерии прохождения
 
-- All automated integration tests pass (exit code 0)
-- All manual checklist items above are verified on a real iOS device
-- No crashes, no console errors, no data loss during normal operation
-- Reconnect/resume delivers complete text with no gaps or duplicates
+- Все автоматические интеграционные тесты проходят (exit code 0)
+- Все пункты ручного чеклиста выше проверены на реальном iOS-устройстве
+- Нет крэшей, нет ошибок в консоли, нет потери данных при штатной работе
+- Реконнект/возобновление доставляет полный текст без пропусков и дубликатов

@@ -1,11 +1,11 @@
-# Streaming Chat Prototype
+# Прототип стримингового чата
 
-Real-time streaming chat system: NestJS backend streams text over socket.io at ~5 words/sec; native SwiftUI iOS app displays words as they arrive, with support for mid-stream cancellation and transparent reconnect/resume.
+Система чата с потоковой передачей в реальном времени: бэкенд на NestJS стримит текст через socket.io со скоростью ~5 слов/сек; нативное iOS-приложение на SwiftUI отображает слова по мере поступления, поддерживает отмену посреди стрима и прозрачный реконнект с возобновлением.
 
-## Tech Stack
+## Стек технологий
 
-| Component | Version |
-|-----------|---------|
+| Компонент | Версия |
+|-----------|--------|
 | Node.js | 20.x LTS |
 | NestJS | 10.x |
 | socket.io | 4.7.x |
@@ -15,7 +15,7 @@ Real-time streaming chat system: NestJS backend streams text over socket.io at ~
 | Xcode | 15+ |
 | socket.io-client-swift | 16.x (SPM) |
 
-## Quick Start: Backend
+## Быстрый старт: бэкенд
 
 ```bash
 cd backend
@@ -23,33 +23,41 @@ npm install
 npm run start:dev
 ```
 
-Server starts on `http://localhost:3000`.
+Сервер запускается на `http://localhost:3000`.
 
-## Quick Start: iOS App
+## Быстрый старт: iOS-приложение
 
-1. Open `ios/StreamingChat.xcodeproj` in Xcode 15+.
-2. Xcode will resolve the `socket.io-client-swift` SPM dependency automatically.
-3. Select a simulator (iOS 17+) and press **Cmd+R** to build and run.
-4. The app connects to `localhost:3000` on launch.
+1. Откройте `ios/StreamingChat.xcodeproj` в Xcode 15+.
+2. Xcode автоматически подтянет SPM-зависимость `socket.io-client-swift`.
+3. Выберите симулятор (iOS 17+) и нажмите **Cmd+R** для сборки и запуска.
+4. Приложение подключается к `localhost:3000` при запуске.
 
-## Project Structure
+## Запуск автотеста реконнекта
+
+```bash
+cd scripts
+npm install
+npx tsx test-reconnect.ts
+```
+
+## Структура проекта
 
 ```
 steuerchat-trial/
-├── PLAN.md                     # Architecture plan and design decisions
-├── WRITEUP.md                  # Technical explanation for reviewers
-├── INTERVIEW_NOTES.md          # Interview prep cheat sheet
+├── PLAN.md                     # Архитектурный план и проектные решения
+├── WRITEUP.md                  # Технический разбор для ревьюеров
+├── TESTING.md                  # Ручной тест-план
 ├── backend/
 │   ├── src/
-│   │   ├── main.ts             # Bootstrap, CORS, port config
-│   │   ├── app.module.ts       # Root NestJS module
-│   │   ├── types.ts            # Shared types/interfaces/enums
+│   │   ├── main.ts             # Точка входа, CORS, конфигурация порта
+│   │   ├── app.module.ts       # Корневой модуль NestJS
+│   │   ├── types.ts            # Общие типы/интерфейсы/перечисления
 │   │   └── chat/
 │   │       ├── chat.module.ts
-│   │       ├── chat.gateway.ts     # Socket.io gateway: event handlers
-│   │       ├── stream-session.ts   # StreamSession state machine + buffer
-│   │       ├── session-manager.ts  # Session map + garbage collection
-│   │       └── corpus.ts           # ~500-word text (Poe excerpt)
+│   │       ├── chat.gateway.ts     # Socket.io gateway: обработчики событий
+│   │       ├── stream-session.ts   # Машина состояний StreamSession + буфер
+│   │       ├── session-manager.ts  # Карта сессий + сборка мусора
+│   │       └── corpus.ts           # ~500 слов текста (отрывок По)
 │   └── test/
 │       ├── stream-session.spec.ts
 │       └── session-manager.spec.ts
@@ -73,7 +81,8 @@ steuerchat-trial/
     └── tsconfig.json
 ```
 
-## Documentation
+## Документация
 
-- **[WRITEUP.md](./WRITEUP.md)** -- Technical deep-dive for reviewers
-- **[PLAN.md](./PLAN.md)** -- Architecture plan and design decisions
+- **[WRITEUP.md](./WRITEUP.md)** -- Техническое описание архитектуры
+- **[TESTING.md](./TESTING.md)** -- Ручной тест-план
+- **[PLAN.md](./PLAN.md)** -- Архитектурный план и проектные решения

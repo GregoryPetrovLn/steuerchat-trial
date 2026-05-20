@@ -1,191 +1,193 @@
-# Interview Prep Notes
+# Заметки для подготовки к интервью
 
-This is a personal cheat sheet. Not for reviewers.
-
----
-
-## Elevator Pitch
-
-This is a real-time streaming chat system built with NestJS and socket.io on the backend and SwiftUI with the official socket.io Swift client on iOS. The server streams a predefined text at 5 words/sec, supporting mid-stream cancellation and transparent reconnect/resume. Session identity uses client-generated UUIDs to survive socket.io reconnects. During disconnects, the server continues buffering words and flushes them as a rapid catch-up batch on resume.
+Личная шпаргалка. Не для ревьюеров.
 
 ---
 
-## Message Protocol
+## Краткое описание
 
-| Event | Direction | Payload | Purpose |
-|-------|-----------|---------|---------|
-| `send-message` | Client -> Server | `{ messageId, text }` | Start streaming a response |
-| `stream-chunk` | Server -> Client | `{ messageId, word, index }` | One word of the stream |
-| `stream-end` | Server -> Client | `{ messageId, totalWords }` | Stream finished normally |
-| `cancel` | Client -> Server | `{ messageId }` | Stop the stream |
-| `stream-cancelled` | Server -> Client | `{ messageId, lastIndex }` | Confirms cancellation |
-| `resume` | Client -> Server | `{ messageId, lastWordIndex }` | Reconnected, request catch-up |
-| `catch-up` | Server -> Client | `{ messageId, words: [{word, index}] }` | Batch of missed words |
-| `error` | Server -> Client | `{ messageId?, message }` | Error notification |
+Это real-time система стримингового чата на NestJS + socket.io (бэкенд) и SwiftUI + socket.io-client-swift (iOS). Сервер стримит предзаданный текст со скоростью 5 слов/сек, поддерживает отмену посреди стрима и прозрачный reconnect/resume. Идентификация сессий через клиентские UUID для переживания реконнектов socket.io. Во время дисконнекта сервер продолжает буферизацию и сбрасывает пропущенные слова пакетом при resume.
 
 ---
 
-## State Machine
+## Протокол сообщений
+
+| Событие | Направление | Payload | Назначение |
+|---------|-------------|---------|------------|
+| `send-message` | Клиент -> Сервер | `{ messageId, text }` | Начать стриминг ответа |
+| `stream-chunk` | Сервер -> Клиент | `{ messageId, word, index }` | Одно слово стрима |
+| `stream-end` | Сервер -> Клиент | `{ messageId, totalWords }` | Стрим завершился нормально |
+| `cancel` | Клиент -> Сервер | `{ messageId }` | Остановить стрим |
+| `stream-cancelled` | Сервер -> Клиент | `{ messageId, lastIndex }` | Подтверждение отмены |
+| `resume` | Клиент -> Сервер | `{ messageId, lastWordIndex }` | Реконнект, запрос на catch-up |
+| `catch-up` | Сервер -> Клиент | `{ messageId, words: [{word, index}] }` | Пакет пропущенных слов |
+| `error` | Сервер -> Клиент | `{ messageId?, message }` | Уведомление об ошибке |
+
+---
+
+## Стейт-машина
 
 ```mermaid
 stateDiagram-v2
     [*] --> STREAMING : send-message
     STREAMING --> BUFFERING : disconnect
     STREAMING --> CANCELLED : cancel
-    STREAMING --> COMPLETED : all words sent
-    BUFFERING --> STREAMING : resume (after catch-up)
-    BUFFERING --> COMPLETED : all words sent while buffering
-    BUFFERING --> [*] : TTL expires (60s)
-    COMPLETED --> [*] : TTL expires (30s)
-    CANCELLED --> [*] : GC removes immediately
+    STREAMING --> COMPLETED : все слова отправлены
+    BUFFERING --> STREAMING : resume (после catch-up)
+    BUFFERING --> COMPLETED : все слова отправлены во время буферизации
+    BUFFERING --> [*] : TTL истёк (60с)
+    COMPLETED --> [*] : TTL истёк (30с)
+    CANCELLED --> [*] : GC удаляет немедленно
 ```
 
 ---
 
-## Reconnect Path Walk-Through
+## Пошаговый walk-through пути реконнекта
 
-Use this when screen-sharing the code. Walk through these files in order:
+Используйте при демонстрации экрана с кодом. Проходите файлы в указанном порядке.
 
-**Step 1: User sends a message.**
-- `ChatViewModel.swift:36-52` -- `sendMessage()` generates a UUID, appends user and server bubbles, sets `currentMessageId` and `lastWordIndex = -1`, emits `send-message`.
-- `chat.gateway.ts:65-112` -- `handleSendMessage` validates, creates a `StreamSession`, links socket to message, calls `session.start()`.
-- `stream-session.ts:42-49` -- `start()` saves the socketId and callback, starts `setInterval` at 200ms.
+**Шаг 1: Пользователь отправляет сообщение.**
+- `ChatViewModel.swift:36-52` -- `sendMessage()` генерирует UUID, добавляет баблы пользователя и сервера, устанавливает `currentMessageId` и `lastWordIndex = -1`, эмитит `send-message`.
+- `chat.gateway.ts:65-112` -- `handleSendMessage` валидирует payload, создаёт `StreamSession`, связывает сокет с сообщением через `linkSocketToMessage`, вызывает `session.start()`.
+- `stream-session.ts:42-49` -- `start()` сохраняет socketId и callback, запускает `setInterval` с интервалом 200мс.
 
-**Step 2: Words stream at 5 wps.**
-- `stream-session.ts:53-79` -- `tick()` reads `words[currentIndex]`, emits `stream-chunk` via the callback.
-- `chat.gateway.ts:103-108` -- The callback resolves the current socketId and emits via `server.to(socketId)`.
-- `ChatViewModel.swift:83-86` -- `onStreamChunk` calls `appendWord`.
-- `ChatViewModel.swift:130-139` -- `appendWord` guards `index > lastWordIndex`, appends word to `streamedText`.
+**Шаг 2: Слова стримятся со скоростью 5 слов/сек.**
+- `stream-session.ts:53-79` -- `tick()` читает `words[currentIndex]`, эмитит `stream-chunk` через callback.
+- `chat.gateway.ts:103-108` -- Callback разрешает текущий socketId и отправляет через `server.to(socketId)`.
+- `ChatViewModel.swift:83-86` -- `onStreamChunk` вызывает `appendWord`.
+- `ChatViewModel.swift:130-139` -- `appendWord` проверяет `index > lastWordIndex`, дописывает слово в `streamedText`.
 
-**Step 3: Network drops.**
-- `chat.gateway.ts:43-61` -- `handleDisconnect` fires. Iterates `socketToMessages` for this socket. Calls `session.pause()` for each message.
-- `stream-session.ts:100-112` -- `pause()` sets state to `BUFFERING`, nulls out `socketId` and `emitCb`, records `disconnectedAt`. Timer keeps running.
-- `stream-session.ts:69-71` -- Subsequent ticks hit the `BUFFERING` branch: `this.buffer.push({ word, index })`.
+**Шаг 3: Сеть падает.**
+- `chat.gateway.ts:43-61` -- Срабатывает `handleDisconnect`. Итерирует `socketToMessages` для данного сокета. Вызывает `session.pause()` для каждого сообщения.
+- `stream-session.ts:100-112` -- `pause()` устанавливает состояние `BUFFERING`, обнуляет `socketId` и `emitCb`, записывает `disconnectedAt`. Таймер продолжает работать.
+- `stream-session.ts:69-71` -- Последующие тики попадают в ветку `BUFFERING`: `this.buffer.push({ word, index })`.
 
-**Step 4: Client side during disconnect.**
-- `SocketService.swift:86-91` -- Disconnect callback fires.
-- `ChatViewModel.swift:78-81` -- Sets `connectionState = .reconnecting`.
-- `ChatView.swift:10-12` -- `ConnectionBanner` appears.
+**Шаг 4: Клиентская сторона во время дисконнекта.**
+- `SocketService.swift:86-91` -- Срабатывает callback дисконнекта.
+- `ChatViewModel.swift:78-81` -- Устанавливает `connectionState = .reconnecting`.
+- `ChatView.swift:10-12` -- Появляется `ConnectionBanner`.
 
-**Step 5: Network restored, client auto-reconnects.**
-- `SocketService.swift:35-37` -- socket.io-client-swift config: `reconnects(true)`, `reconnectWait(1)`, `reconnectWaitMax(5)`.
-- `SocketService.swift:80-84` -- Connect handler fires.
-- `ChatViewModel.swift:65-76` -- `onConnect` sets `.connected`. Detects active stream (`currentMessageId != nil && isStreaming`). Calls `socketService.resumeStream(messageId:, lastWordIndex:)`.
-- `SocketService.swift:68-73` -- Emits `resume` event.
+**Шаг 5: Сеть восстановилась, клиент автоматически переподключается.**
+- `SocketService.swift:35-37` -- Конфигурация socket.io-client-swift: `reconnects(true)`, `reconnectWait(1)`, `reconnectWaitMax(5)`.
+- `SocketService.swift:80-84` -- Срабатывает handler подключения.
+- `ChatViewModel.swift:65-76` -- `onConnect` устанавливает `.connected`. Обнаруживает активный стрим (`currentMessageId != nil && isStreaming`). Вызывает `socketService.resumeStream(messageId:, lastWordIndex:)`.
+- `SocketService.swift:68-73` -- Эмитит событие `resume`.
 
-**Step 6: Server processes resume.**
-- `chat.gateway.ts:142-199` -- `handleResume` validates, finds session, updates socket mappings (`unlinkMessage` + `linkSocketToMessage`), creates new emit callback, calls `session.resume()`.
-- `stream-session.ts:118-153` -- `resume()` rebuilds catch-up from `words[lastWordIndex+1..currentIndex-1]`, clears buffer, sets state to `STREAMING`.
-- `chat.gateway.ts:192-194` -- Emits `catch-up` if there are missed words.
+**Шаг 6: Сервер обрабатывает resume.**
+- `chat.gateway.ts:142-199` -- `handleResume` валидирует, находит сессию, обновляет маппинги сокетов (`unlinkMessage` + `linkSocketToMessage`), создаёт новый emit callback, вызывает `session.resume()`.
+- `stream-session.ts:118-153` -- `resume()` восстанавливает пропущенные слова из `words[lastWordIndex+1..currentIndex-1]`, очищает буфер, устанавливает состояние `STREAMING`.
+- `chat.gateway.ts:192-194` -- Эмитит `catch-up`, если есть пропущенные слова.
 
-**Step 7: Client processes catch-up and resumes.**
-- `ChatViewModel.swift:95-100` -- `onCatchUp` iterates words, calls `appendWord` for each.
-- `ChatViewModel.swift:135` -- Guard `index > lastWordIndex` prevents duplicates.
-- Normal `stream-chunk` events resume on the new socket.
-
----
-
-## Answers to Expected Questions
-
-### 1. How does the WebSocket connection work?
-
-The backend uses NestJS's `@WebSocketGateway` which wraps socket.io. The iOS client uses the official `socket.io-client-swift` library with forced WebSocket transport and auto-reconnect. On connect, the server logs the socket ID. The client can immediately start emitting events. All communication is event-based with JSON payloads identified by `messageId`.
-
-### 2. How is streaming implemented?
-
-A `setInterval` at 200ms (5 wps) advances through a word array. Each tick reads the word at the current index and emits a `stream-chunk` event with the word and its index. The client appends each word to the displayed text. When all words are sent, the server emits `stream-end` and clears the timer.
-
-### 3. How does cancellation stop the server response?
-
-The client emits a `cancel` event with the `messageId`. The server finds the corresponding `StreamSession`, calls `cancel()` which clears the interval timer and marks the state as `CANCELLED`. The server emits `stream-cancelled` back to the client, then destroys the session. The client marks the message as no longer streaming and shows the partial text as final.
-
-### 4. How does reconnect/resume work after a temporary disconnect?
-
-On disconnect, the server pauses the session but keeps the timer running -- words go into an in-memory buffer instead of the socket. When the client reconnects (new socket.id), it detects an active stream and emits `resume` with the last word index it received. The server reconstructs all missed words from the corpus, sends them as a single `catch-up` batch, rebinds the emit callback to the new socket, and resumes normal streaming.
-
-### 5. What tradeoffs did you make?
-
-In-memory storage means no persistence across server restarts. Buffering instead of pausing means the server does unnecessary work if the client never comes back, but enables instant catch-up which feels much better. No auth, no horizontal scaling, no backpressure. The 60s TTL for buffering sessions is a practical default but arbitrary.
-
-### 6. What would you improve with more time?
-
-Redis-backed sessions for horizontal scaling. JWT auth on the socket.io handshake. Backpressure detection (check transport writability before emitting). Rate limiting. Persistent chat history in a database. E2E tests with a real iOS simulator. Prometheus metrics for active sessions and reconnect rates. Configurable streaming rate.
+**Шаг 7: Клиент обрабатывает catch-up и возобновляет приём.**
+- `ChatViewModel.swift:95-100` -- `onCatchUp` итерирует слова, вызывает `appendWord` для каждого.
+- `ChatViewModel.swift:135` -- Guard `index > lastWordIndex` предотвращает дубликаты.
+- Обычные события `stream-chunk` продолжают приходить на новом сокете.
 
 ---
 
-## Likely Follow-Up Questions
+## Ответы на ожидаемые вопросы
 
-### 1. What if two devices use the same messageId?
+### 1. Как работает WebSocket соединение?
 
-They would interfere. When device B sends `resume` for the same messageId, the server rebinds the emit callback to device B's socket. Device A would stop receiving chunks. In production, auth would tie a messageId to a user/device pair.
+Бэкенд использует `@WebSocketGateway` из NestJS, который оборачивает socket.io. iOS-клиент использует официальную библиотеку `socket.io-client-swift` с принудительным WebSocket транспортом и авто-реконнектом. При подключении сервер логирует socket ID. Клиент может сразу эмитить события. Вся коммуникация строится на именованных событиях с JSON payload, идентифицируемых через `messageId`.
 
-### 2. Why buffer instead of pause?
+### 2. Как реализован стриминг?
 
-Buffering mimics LLM behavior -- the model does not stop generating because the client dropped. It enables instant catch-up: all missed words are already computed. Pausing would mean the user waits the full remaining duration after reconnect, which feels broken.
+`setInterval` с интервалом 200мс (5 слов/сек) продвигается по массиву слов. Каждый тик читает слово по текущему индексу и эмитит событие `stream-chunk` со словом и его индексом. Клиент дописывает каждое слово к отображаемому тексту. Когда все слова отправлены, сервер эмитит `stream-end` и очищает таймер.
 
-### 3. How would this scale to N servers?
+### 3. Как отмена останавливает ответ сервера?
 
-Right now it does not -- sessions are in-process memory. You would need Redis or a similar shared store for session state, plus sticky sessions or a Redis-backed socket.io adapter (`@socket.io/redis-adapter`) so events route to the right server.
+Клиент эмитит событие `cancel` с `messageId`. Сервер находит соответствующую `StreamSession`, вызывает `cancel()`, который очищает interval-таймер и помечает состояние как `CANCELLED`. Сервер эмитит `stream-cancelled` обратно клиенту и уничтожает сессию. Клиент помечает сообщение как завершённое и показывает частичный текст как финальный.
 
-### 4. What breaks if the server restarts mid-stream?
+### 4. Как работает reconnect/resume после временного дисконнекта?
 
-Everything. All sessions are lost. The client would reconnect, emit `resume`, and get an error ("No session found"). You would need persistent session storage to survive restarts.
+При дисконнекте сервер ставит сессию на паузу, но оставляет таймер работающим -- слова идут во внутренний буфер вместо сокета. Когда клиент переподключается (новый socket.id), он обнаруживает активный стрим и эмитит `resume` с индексом последнего полученного слова. Сервер восстанавливает все пропущенные слова из корпуса, отправляет их единым пакетом `catch-up`, перепривязывает emit callback к новому сокету и возобновляет обычный стриминг.
 
-### 5. How do you prevent duplicate words after catch-up?
+### 5. Какие компромиссы вы приняли?
 
-The client tracks `lastWordIndex` (`ChatViewModel.swift:135`). The `appendWord` method guards with `index > lastWordIndex` -- if a word's index is at or below what we already have, it is silently dropped.
+In-memory хранилище означает отсутствие персистентности при перезапуске сервера. Буферизация вместо паузы означает, что сервер делает лишнюю работу, если клиент не вернётся, но обеспечивает мгновенный catch-up, что ощущается гораздо лучше. Нет аутентификации, горизонтального масштабирования, backpressure. TTL 60с для буферизируемых сессий -- практичный дефолт, но произвольный.
 
-### 6. Why socket.io instead of raw WebSocket?
+### 6. Что бы вы улучшили, имея больше времени?
 
-Socket.io gives us structured events (named channels), automatic reconnect with backoff, room-based emit (`server.to(socketId)`), and the Engine.IO framing/heartbeat layer. With raw WebSocket you have to build all of that yourself plus handle the binary framing.
-
-### 7. What happens if the client sends resume for a non-existent messageId?
-
-The server returns an `error` event: `"No session found for this messageId"` (`chat.gateway.ts:163-167`). The client receives it and appends an error message to the chat.
-
-### 8. Could you use Server-Sent Events instead?
-
-SSE is unidirectional (server to client). You would still need a separate channel for client-to-server events (cancel, resume). WebSocket/socket.io gives bidirectional communication on a single connection, which is simpler for this use case.
-
-### 9. How would you add authentication?
-
-A JWT middleware on the socket.io handshake. The client sends the token in `auth` during connection. The server verifies it in a NestJS guard or middleware before allowing the connection. On resume, you would also verify that the authenticated user owns the messageId.
-
-### 10. What if the text was 1 million words?
-
-The buffer would grow large. You would need to cap buffer size, stream from disk/database instead of holding the full corpus in memory, and implement backpressure. The current approach of holding `CORPUS_WORDS` as an in-memory array works for ~500 words but not for millions.
+Сессии в Redis для горизонтального масштабирования. JWT-аутентификация на handshake socket.io. Обнаружение backpressure (проверка writability транспорта перед отправкой). Rate limiting. Персистентная история чата в базе данных. E2E-тесты с реальным iOS-симулятором. Метрики Prometheus для активных сессий и частоты реконнектов. Настраиваемая скорость стриминга.
 
 ---
 
-## Five Live-Change Requests
+## Вероятные follow-up вопросы
 
-### 1. Change streaming rate to 10 words per second
+### 1. Что если два устройства используют один messageId?
 
-**File:** `backend/src/chat/stream-session.ts`
+Они будут конфликтовать. Когда устройство B отправляет `resume` для того же messageId, сервер перепривязывает emit callback к сокету устройства B. Устройство A перестанет получать chunks. В продакшене аутентификация привязывала бы messageId к паре пользователь/устройство.
 
-Before:
+### 2. Почему буферизация, а не пауза?
+
+Буферизация имитирует поведение LLM -- модель не прекращает генерацию из-за того, что клиент отключился. Это обеспечивает мгновенный catch-up: все пропущенные слова уже вычислены. Пауза означала бы, что пользователь ждёт оставшееся время стрима после реконнекта, что ощущается сломанным.
+
+### 3. Как масштабировать на N серверов?
+
+Сейчас -- никак, сессии хранятся в памяти процесса. Понадобятся Redis или аналогичное хранилище для состояния сессий, плюс sticky sessions или socket.io-адаптер на Redis (`@socket.io/redis-adapter`), чтобы события маршрутизировались на правильный сервер.
+
+### 4. Что сломается при рестарте сервера во время стрима?
+
+Всё. Все сессии теряются. Клиент переподключится, эмитнет `resume` и получит ошибку ("No session found"). Понадобится персистентное хранилище сессий для переживания рестартов.
+
+### 5. Как предотвращаются дубликаты слов после catch-up?
+
+Клиент отслеживает `lastWordIndex` (`ChatViewModel.swift:135`). Метод `appendWord` содержит guard `index > lastWordIndex` -- если индекс слова равен или меньше того, что уже есть, слово молча отбрасывается.
+
+### 6. Почему socket.io, а не сырой WebSocket?
+
+Socket.io даёт структурированные события (именованные каналы), автоматический реконнект с backoff, emit по room (`server.to(socketId)`) и Engine.IO фрейминг/heartbeat. С сырым WebSocket всё это нужно строить вручную, плюс обрабатывать бинарный фрейминг.
+
+### 7. Что произойдёт при resume с несуществующим messageId?
+
+Сервер вернёт событие `error`: `"No session found for this messageId"` (`chat.gateway.ts:163-167`). Клиент получит его и добавит сообщение об ошибке в чат.
+
+### 8. Можно ли использовать Server-Sent Events вместо WebSocket?
+
+SSE однонаправлен (только сервер к клиенту). Для клиентских событий (cancel, resume) понадобился бы отдельный канал. WebSocket/socket.io даёт двунаправленную коммуникацию на одном соединении, что проще для данного use case.
+
+### 9. Как добавить аутентификацию?
+
+JWT middleware на handshake socket.io. Клиент отправляет токен в `auth` при подключении. Сервер проверяет его в NestJS guard или middleware перед разрешением соединения. При resume также нужно проверять, что аутентифицированный пользователь владеет данным messageId.
+
+### 10. Что если текст будет миллион слов?
+
+Буфер вырастет до огромных размеров. Нужно ограничить размер буфера, стримить с диска/базы данных вместо удержания всего корпуса в памяти, и реализовать backpressure. Текущий подход с `CORPUS_WORDS` как in-memory массивом работает для ~500 слов, но не для миллионов.
+
+---
+
+## Пять запросов на live-изменения с точными диффами
+
+### 1. Изменить скорость стриминга на 10 слов/сек
+
+**Файл:** `backend/src/chat/stream-session.ts`
+
+Изменение на строке 47-49. Интервал уменьшается с 200мс до 100мс, удваивая скорость с 5 до 10 слов/сек.
+
+До:
 ```typescript
 this.timer = setInterval(() => {
   this.tick();
 }, 200);
 ```
 
-After:
+После:
 ```typescript
 this.timer = setInterval(() => {
   this.tick();
 }, 100);
 ```
 
-Change is on line 47-49. The interval drops from 200ms to 100ms, doubling the rate from 5 to 10 wps.
-
 ---
 
-### 2. Add a typing indicator event
+### 2. Добавить typing indicator
 
-**File:** `backend/src/chat/stream-session.ts`
+**Файл:** `backend/src/chat/stream-session.ts`
 
-Before (`start` method, line 42-49):
+В метод `start` (строка 42-49) добавляется emit `typing-start` перед запуском таймера.
+
+До:
 ```typescript
 start(socketId: string, emitCallback: EmitCallback): void {
   this.socketId = socketId;
@@ -198,7 +200,7 @@ start(socketId: string, emitCallback: EmitCallback): void {
 }
 ```
 
-After:
+После:
 ```typescript
 start(socketId: string, emitCallback: EmitCallback): void {
   this.socketId = socketId;
@@ -213,7 +215,26 @@ start(socketId: string, emitCallback: EmitCallback): void {
 }
 ```
 
-Then in the `complete` method (line 82-93), before setting state to COMPLETED:
+В метод `complete` (строка 82-93) добавляется emit `typing-stop` перед `stream-end`.
+
+До:
+```typescript
+private complete(): void {
+  this.clearTimer();
+
+  if (this.state === SessionState.STREAMING && this.emitCb) {
+    this.emitCb('stream-end', {
+      messageId: this.messageId,
+      totalWords: this.words.length,
+    });
+  }
+
+  this.state = SessionState.COMPLETED;
+  this.disconnectedAt = Date.now();
+}
+```
+
+После:
 ```typescript
 private complete(): void {
   this.clearTimer();
@@ -233,11 +254,13 @@ private complete(): void {
 
 ---
 
-### 3. Persist sessions to Redis
+### 3. Персистировать сессии в Redis
 
-**File:** `backend/src/chat/session-manager.ts`
+**Файл:** `backend/src/chat/session-manager.ts`
 
-Before:
+Концептуальное изменение -- требует зависимость `ioredis`. Заменяет in-memory `Map` на Redis-backed хранилище.
+
+До:
 ```typescript
 @Injectable()
 export class SessionManager implements OnModuleDestroy {
@@ -245,7 +268,7 @@ export class SessionManager implements OnModuleDestroy {
   public readonly sessions = new Map<string, StreamSession>();
 ```
 
-After (conceptual -- requires `ioredis` dependency):
+После:
 ```typescript
 import Redis from 'ioredis';
 
@@ -253,7 +276,7 @@ import Redis from 'ioredis';
 export class SessionManager implements OnModuleDestroy {
   private readonly logger = new Logger(SessionManager.name);
   private readonly redis = new Redis(process.env.REDIS_URL);
-  public readonly sessions = new Map<string, StreamSession>(); // local cache
+  public readonly sessions = new Map<string, StreamSession>(); // локальный кеш
 
   async persistSession(messageId: string, session: StreamSession): Promise<void> {
     await this.redis.set(
@@ -281,21 +304,23 @@ export class SessionManager implements OnModuleDestroy {
   }
 ```
 
-You would also call `persistSession` in the `pause()` path and `restoreSession` in the `handleResume` path.
+Также нужно вызывать `persistSession` в пути `pause()` и `restoreSession` в пути `handleResume`.
 
 ---
 
-### 4. Add JWT authentication
+### 4. Добавить JWT-аутентификацию
 
-**File:** `backend/src/chat/chat.gateway.ts`
+**Файл:** `backend/src/chat/chat.gateway.ts`
 
-Before:
+Добавляется middleware на handshake socket.io, которое проверяет JWT-токен перед разрешением соединения.
+
+До:
 ```typescript
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 ```
 
-After:
+После:
 ```typescript
 import { verify } from 'jsonwebtoken';
 
@@ -321,7 +346,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 ```
 
-On the iOS side, add the token to `SocketService.init()`:
+На стороне iOS в `SocketService.swift` (строка 30-42) добавляется токен в конфигурацию:
+
+До:
+```swift
+manager = SocketManager(
+    socketURL: Self.serverURL,
+    config: [
+        .forceWebsockets(true),
+        .reconnects(true),
+        .reconnectWait(1),
+        .reconnectWaitMax(5),
+        .log(false)
+    ]
+)
+```
+
+После:
 ```swift
 manager = SocketManager(
     socketURL: Self.serverURL,
@@ -338,11 +379,13 @@ manager = SocketManager(
 
 ---
 
-### 5. Add backpressure handling
+### 5. Добавить backpressure
 
-**File:** `backend/src/chat/stream-session.ts`
+**Файл:** `backend/src/chat/stream-session.ts`
 
-Before (`tick` method, line 62-68):
+В метод `tick` (строка 62-68) добавляется проверка writability сокета перед отправкой. Если буфер транспорта переполнен, слово уходит в локальный буфер.
+
+До:
 ```typescript
 if (this.state === SessionState.STREAMING && this.emitCb) {
   const payload: StreamChunkPayload = {
@@ -354,7 +397,7 @@ if (this.state === SessionState.STREAMING && this.emitCb) {
 }
 ```
 
-After:
+После:
 ```typescript
 if (this.state === SessionState.STREAMING && this.emitCb) {
   if (this.socketWritable) {
@@ -365,19 +408,20 @@ if (this.state === SessionState.STREAMING && this.emitCb) {
     };
     this.emitCb('stream-chunk', payload);
   } else {
-    // Socket buffer is full; buffer locally until drain
+    // Буфер сокета переполнен; буферизуем локально до drain
     this.buffer.push({ word, index });
   }
 }
 ```
 
-Add a `socketWritable` flag and have the gateway set it based on the socket's `drain` event:
+Добавляется флаг `socketWritable` и обработчик `drain` в gateway (`chat.gateway.ts`), после привязки сокета:
+
 ```typescript
-// In chat.gateway.ts, after linking socket:
+// В chat.gateway.ts, после linkSocketToMessage:
 socket.conn.on('drain', () => {
   const session = this.sessionManager.getSession(messageId);
   if (session) session.socketWritable = true;
 });
 ```
 
-This prevents the server from flooding a slow client and falling back to buffering when the transport cannot keep up.
+Это предотвращает переполнение медленного клиента и включает локальную буферизацию, когда транспорт не справляется.

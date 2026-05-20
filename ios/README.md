@@ -1,74 +1,74 @@
-# StreamingChat - iOS
+# StreamingChat — iOS
 
-Native SwiftUI chat app that connects to a socket.io backend and displays streamed responses in real time. Supports cancel mid-stream and automatic reconnect with resume.
+Нативное SwiftUI-приложение для чата, которое подключается к бэкенду через socket.io и отображает потоковые ответы в реальном времени. Поддерживает отмену посреди стрима и автоматическое переподключение с возобновлением.
 
-## Prerequisites
+## Требования
 
-- Xcode 15 or later
-- iOS 17.0+ simulator or physical device
-- The backend server running at `localhost:3000` (see `../backend/`)
+- Xcode 15 или новее
+- Симулятор или физическое устройство с iOS 17.0+
+- Запущенный бэкенд-сервер на `localhost:3000` (см. `../backend/`)
 
-## Setup
+## Настройка
 
-1. Open `StreamingChat.xcodeproj` in Xcode.
-2. Xcode will automatically resolve the Swift Package Manager dependency (`socket.io-client-swift`). Wait for it to finish.
-3. Select an iOS 17+ simulator (e.g. iPhone 15) or a physical device.
-4. Press **Cmd+R** to build and run.
+1. Откройте `StreamingChat.xcodeproj` в Xcode.
+2. Xcode автоматически загрузит зависимость Swift Package Manager (`socket.io-client-swift`). Дождитесь завершения.
+3. Выберите симулятор с iOS 17+ (например, iPhone 15) или физическое устройство.
+4. Нажмите **Cmd+R** для сборки и запуска.
 
-## Configuration
+## Конфигурация
 
-The server URL is set in `StreamingChat/Networking/SocketService.swift`:
+URL сервера задаётся в файле `StreamingChat/Networking/SocketService.swift`:
 
 ```swift
 private static let serverURL = URL(string: "http://localhost:3000")!
 ```
 
-Change this to point to your backend if it runs on a different host or port.
+Измените это значение, если бэкенд работает на другом хосте или порту.
 
-### Running on a physical device
+### Запуск на физическом устройстве
 
-If you run the app on a real iPhone connecting to a Mac running the server:
+Если вы запускаете приложение на реальном iPhone, а сервер работает на Mac:
 
-1. Replace `localhost` with your Mac's local IP address (e.g. `http://192.168.1.42:3000`).
-2. The app declares `NSLocalNetworkUsageDescription` in its Info.plist so iOS will prompt for local network access -- allow it.
-3. Make sure both the Mac and the iPhone are on the same Wi-Fi network.
+1. Замените `localhost` на локальный IP-адрес вашего Mac (например, `http://192.168.1.42:3000`).
+2. В приложении объявлен `NSLocalNetworkUsageDescription` в Info.plist — iOS запросит разрешение на доступ к локальной сети. Разрешите его.
+3. Убедитесь, что Mac и iPhone подключены к одной Wi-Fi сети.
 
-## Testing the reconnect scenario
+## Тестирование реконнекта
 
-1. Start the backend server and send a message in the app.
-2. While the response is streaming, toggle **Airplane Mode** on the device (or disconnect the simulator's network via Network Link Conditioner).
-3. The connection banner should turn yellow ("Reconnecting...").
-4. Re-enable the network. The app will auto-reconnect, request catch-up from the server, and resume displaying the stream from where it left off.
+1. Запустите бэкенд-сервер и отправьте сообщение в приложении.
+2. Пока ответ стримится, включите **Авиарежим** на устройстве (или отключите сеть симулятора через Network Link Conditioner).
+3. Баннер подключения должен стать жёлтым («Reconnecting...»).
+4. Включите сеть обратно. Приложение автоматически переподключится, запросит пропущенные данные с сервера и продолжит отображение стрима с того места, где остановилось.
 
-## Architecture
+## Архитектура
 
 ```
 StreamingChat/
-  StreamingChatApp.swift       App entry point
+  StreamingChatApp.swift       Точка входа приложения
   Models/
-    ChatMessage.swift          Message data model
-    ConnectionState.swift      Connection state enum
+    ChatMessage.swift          Модель данных сообщения
+    ConnectionState.swift      Перечисление состояний подключения
   Networking/
-    SocketService.swift        socket.io client wrapper
+    SocketService.swift        Обёртка над клиентом socket.io
   ViewModels/
-    ChatViewModel.swift        Main state management (ObservableObject)
+    ChatViewModel.swift        Основное управление состоянием (ObservableObject)
   Views/
-    ChatView.swift             Main chat screen
-    MessageBubble.swift        Individual message bubble
-    ConnectionBanner.swift     Connection status indicator
+    ChatView.swift             Главный экран чата
+    MessageBubble.swift        Пузырёк отдельного сообщения
+    ConnectionBanner.swift     Индикатор состояния подключения
 ```
 
-## Protocol
+## Протокол
 
-The app communicates with the backend using the following socket.io events:
+Приложение взаимодействует с бэкендом через следующие события socket.io:
 
-| Event | Direction | Payload |
-|-------|-----------|---------|
-| `send-message` | Client -> Server | `{ messageId, text }` |
-| `stream-chunk` | Server -> Client | `{ messageId, word, index }` |
-| `stream-end` | Server -> Client | `{ messageId, totalWords }` |
-| `cancel` | Client -> Server | `{ messageId }` |
-| `stream-cancelled` | Server -> Client | `{ messageId, lastIndex }` |
-| `resume` | Client -> Server | `{ messageId, lastWordIndex }` |
-| `catch-up` | Server -> Client | `{ messageId, words: [{word, index}] }` |
-| `error` | Server -> Client | `{ messageId?, message }` |
+| Событие | Направление | Данные |
+|---------|-------------|--------|
+| `send-message` | Клиент → Сервер | `{ messageId, text }` |
+| `stream-chunk` | Сервер → Клиент | `{ messageId, word, index }` |
+| `stream-end` | Сервер → Клиент | `{ messageId, totalWords }` |
+| `cancel` | Клиент → Сервер | `{ messageId }` |
+| `stream-cancelled` | Сервер → Клиент | `{ messageId, lastIndex }` |
+| `resume` | Клиент → Сервер | `{ messageId, lastWordIndex }` |
+| `catch-up` | Сервер → Клиент | `{ messageId, words: [{word, index}] }` |
+| `error` | Сервер → Клиент | `{ messageId?, message }` |
