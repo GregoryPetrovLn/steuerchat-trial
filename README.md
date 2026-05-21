@@ -85,4 +85,3 @@ steuerchat-trial/
 
 - **[WRITEUP.md](./WRITEUP.md)** -- Техническое описание архитектуры
 - **[TESTING.md](./TESTING.md)** -- Ручной тест-план
-- **[PLAN.md](./PLAN.md)** -- Архитектурный план и проектные решения
