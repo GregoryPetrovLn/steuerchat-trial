@@ -15,6 +15,7 @@ final class ChatViewModel: ObservableObject {
 
     private var currentMessageId: String?
     private var lastWordIndex: Int = -1
+    private var offlineTimer: Timer?
 
     // MARK: - Networking
 
@@ -64,6 +65,8 @@ final class ChatViewModel: ObservableObject {
 
         socketService.onConnect = { [weak self] in
             guard let self else { return }
+            self.offlineTimer?.invalidate()
+            self.offlineTimer = nil
             self.connectionState = .connected
 
             // Resume an in-progress stream after reconnect
@@ -77,11 +80,8 @@ final class ChatViewModel: ObservableObject {
 
         socketService.onDisconnect = { [weak self] reason in
             guard let self else { return }
-            if reason == "reconnecting" {
-                self.connectionState = .reconnecting
-            } else if self.connectionState == .connected {
-                self.connectionState = .reconnecting
-            }
+            self.connectionState = .reconnecting
+            self.startOfflineTimer()
         }
 
         socketService.onStreamChunk = { [weak self] messageId, word, index in
@@ -141,6 +141,15 @@ final class ChatViewModel: ObservableObject {
 
         let separator = messages[idx].streamedText.isEmpty ? "" : " "
         messages[idx].streamedText += separator + word
+    }
+
+    private func startOfflineTimer() {
+        offlineTimer?.invalidate()
+        offlineTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.connectionState = .offline
+            }
+        }
     }
 
     private func finaliseStream() {
