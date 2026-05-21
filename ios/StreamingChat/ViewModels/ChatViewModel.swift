@@ -75,9 +75,13 @@ final class ChatViewModel: ObservableObject {
             }
         }
 
-        socketService.onDisconnect = { [weak self] _ in
+        socketService.onDisconnect = { [weak self] reason in
             guard let self else { return }
-            self.connectionState = .reconnecting
+            if reason == "reconnecting" {
+                self.connectionState = .reconnecting
+            } else if self.connectionState == .connected {
+                self.connectionState = .reconnecting
+            }
         }
 
         socketService.onStreamChunk = { [weak self] messageId, word, index in

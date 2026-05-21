@@ -90,6 +90,22 @@ final class SocketService {
             }
         }
 
+        socket.on(clientEvent: .statusChange) { [weak self] data, _ in
+            guard let status = data.first as? SocketIOStatus else { return }
+            DispatchQueue.main.async {
+                switch status {
+                case .notConnected, .disconnected:
+                    self?.onDisconnect?("statusChange")
+                case .connecting:
+                    self?.onDisconnect?("reconnecting")
+                case .connected:
+                    break // handled by .connect
+                @unknown default:
+                    break
+                }
+            }
+        }
+
         socket.on("stream-chunk") { [weak self] data, _ in
             guard let payload = data.first as? [String: Any],
                   let messageId = payload["messageId"] as? String,
