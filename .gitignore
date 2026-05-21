@@ -4,3 +4,5 @@ dist/
 .DS_Store
 *.d.ts
 *.js.map
+xcuserdata/
+project.xcworkspace/

@@ -8,7 +8,7 @@ final class SocketService {
 
     // MARK: - Configuration
 
-    private static let serverURL = URL(string: "http://localhost:3000")!
+    private static let serverURL = URL(string: "http://192.168.0.155:3000")!
 
     // MARK: - Socket.IO objects
 
