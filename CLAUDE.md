@@ -23,7 +23,7 @@ scripts/          Интеграционный тест реконнекта (ts
 # Бэкенд
 cd backend && npm install && npm run build && node dist/main.js   # запуск
 cd backend && npm test                                             # юнит-тесты (13 штук)
-cd backend && npm run start:dev                                    # dev-режим с watch
+cd backend && npm run dev                                    # dev-режим с watch
 
 # Интеграционный тест (бэкенд должен быть запущен)
 cd scripts && npm install && npx tsx test-reconnect.ts

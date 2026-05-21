@@ -20,7 +20,7 @@
 ```bash
 cd backend
 npm install
-npm run start:dev
+npm run dev
 ```
 
 Сервер запускается на `http://localhost:3000`.
